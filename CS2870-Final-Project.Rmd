@@ -1,29 +1,72 @@
 ---
 title: "CS2870-Final-Project"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 date: "2023-11-14"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(dplyr, tidyverse)
+crime_data_sample <- read_csv("Crime_Data_from_2020_to_Present.csv")
 ```
 
-## R Markdown
+## Intro
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+The source for our data is kaggle.com and the data set was created on October 12, 2023. This data is not a sample as it is all the crime data from the year 2020 to the present (2023), and because of this, it does not have any sampling bias. The data from this set was collected from data.gov and was created in November of 2020 and has been regularly updated since, and is maintained by LAPD OpenData. This was an observational study looking at all the crimes that occurred from 2020-2023. This data is of interest to us because we think that analyzing crime data could help people to better understand when/where/why crimes occur and what can be predicted based on the data. As for cleaning the data, we first cut the data set in half because it was too large and making graphs, manipulating the data, etc was taking longer than we wanted. Next we used dplyr::select() to keep the columns that we thought were relevant to the graphs we were going to make and the machine learning we planned to implement. After that we used rename() to rename the columns to something more readable and intuitive and used mutate() to remove unnecessary white space from our 'location' column. Lastly, we used filter to keep the rows where the age was in the range we wanted (0 to 90), the latitude and longitude weren't equal to zero, and the rows did not contain NA or no value.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r cleaning}
+RNGversion("4.1.0"); set.seed(2870)
 
-```{r cars}
-summary(cars)
+crime_data_sample |>
+  slice_sample(prop = 0.5)
+
+
+crime_data_sample |>
+  dplyr::select(`Date Rptd`, `DATE OCC`, `TIME OCC`, AREA, `AREA NAME`, `Crm Cd Desc`, `Vict Age`, `Vict Sex`, `Vict Descent`,
+                `Premis Desc`, `Weapon Desc`, `Status Desc`, LOCATION, LAT, LON) |>
+  rename(
+    "date_reported" = `Date Rptd`, 
+    "date_occurred" = `DATE OCC`,
+    "time_occurred" = `TIME OCC`,
+    "area" = AREA,
+    "area_name" = `AREA NAME`,
+    "crime_description" = `Crm Cd Desc`,
+    "victim_age" = `Vict Age`,
+    "victim_sex" = `Vict Sex`,
+    "victim_descent" = `Vict Descent`,
+    "premise_desc" = `Premis Desc`,
+    "weapon_desc" = `Weapon Desc`,
+    "status" = `Status Desc`,
+    "location" = LOCATION,
+    "lat" = LAT,
+    "long" = LON
+  ) |>
+  
+  mutate(location = str_squish(location)) |>
+  
+  filter(
+    victim_age > 0 & victim_age <= 90,
+    !is.na(victim_sex),
+    !is.na(victim_descent),
+    !is.na(date_reported),
+    !is.na(date_occurred),
+    !is.na(time_occurred),
+    !is.na(area),
+    !is.na(area_name),
+    !is.na(crime_description),
+    !is.na(premise_desc),
+    !is.na(victim_age),
+    !is.na(status),
+    !is.na(location),
+    lat != 0 & long != 0,
+    !is.na(lat),
+    !is.na(long)
+  ) |>
+  
+  slice_sample(prop = .5) ->
+  
+  crime_data
+
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
