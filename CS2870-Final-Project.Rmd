@@ -7,9 +7,10 @@ date: "2023-11-14"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 pacman::p_load(tidyverse, dplyr, usmap, maps, ggthemes, sf, lubridate, scales)
-crime_data_sample <- read_csv("Crime_Data_from_2020_to_Present.csv")
+crime_data_sample <- read_csv("Crime_Data_from_2020_to_Present (1).csv")
 
 us_states <- map_data(map = "state")
+us_counties <- map_data(map = "county")
 
 theme_set(theme_map())
 ```
@@ -84,6 +85,11 @@ ggplot(
     x = victim_age
   ),
 ) +
+  
+  geom_histogram(
+    color = "black",
+    fill = "firebrick"
+  ) +
   
   geom_density(
     color = "black",
@@ -206,5 +212,103 @@ ggplot(data = crime_times,
        y = "Number of crimes that occured") + 
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+```{r density usa map crimes}
+
+crime_data |>
+  slice_sample(n = 1000) ->
+  crime_slice
+
+
+ggplot(
+  data = us_counties |> filter(subregion == "los angeles"),
+  mapping = aes(
+    x = long,
+    y = lat,
+    group = group
+  )
+) +
+
+  # Use geom_polygon to draw the lines for each state
+  geom_polygon(
+    color = "gray17",
+    size = 1,
+    fill = "firebrick4"
+  ) + 
+  
+  # Add the correct theme below
+  theme_map() +
+  
+  theme(
+    plot.background = element_rect(fill = "gray18")
+  ) +
+
+  # Add this function to make the map look more like what it would be on a globe
+  coord_map(projection = "albers", 
+            lat0 = 39, lat1 = 45) +
+  
+  geom_point(
+    data = crime_data |> filter(str_detect(crime_description, "BURGLARY") & victim_age >= 18 & victim_age < 25),
+    mapping = aes(
+      x = long,
+      y = lat,
+      group = area_name
+    )
+  ) 
+  
+
+
+
+```
+
+
+``` {r idk soem graph}
+
+crime_data_date <- 
+  crime_data |>
+  
+  mutate(date = as.Date(date_occurred, format = "%m/%d/%Y %I:%M:%S %p"),
+         months_since_2020 = (year(date) - 2020) * 12 + month(date))|>
+  
+  filter(victim_sex == "M" | victim_sex == "F")
+
+
+
+crime_summarized <- crime_data_date |>
+  
+  group_by(months_since_2020, victim_sex) |>
+  
+  summarise(crime_count = n())
+
+ggplot(
+  data = crime_summarized,
+  mapping = aes(
+    x = months_since_2020,
+    y = crime_count,
+    group = victim_sex,
+    color = victim_sex
+  )
+) +
+  
+  geom_line() +
+  
+  
+  theme_bw() +
+  
+  labs(
+    x = "Months since January 2020",
+    y = "Crime Count",
+    color = "Victim Sex"
+  ) +
+  
+  scale_x_continuous(
+    expand = c(0,0,.05,0)
+  ) +
+  
+  scale_y_continuous(
+    expand = c(0.0005,0,0.05,0)
+  )
+
 
 ```
