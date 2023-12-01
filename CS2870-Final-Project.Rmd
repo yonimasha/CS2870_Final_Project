@@ -1,13 +1,14 @@
 ---
 title: "CS2870-Final-Project"
 output: pdf_document
+authors: Yoni Masha, Charlie Corriero 
 date: "2023-11-14"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 pacman::p_load(tidyverse, dplyr, usmap, maps, ggthemes, sf, lubridate, scales)
-crime_data_sample <- read_csv("Crime_Data_from_2020_to_Present.csv")
+crime_data_sample <- read_csv("Crime_Data_from_2020_to_Present (1).csv")
 
 us_states <- map_data(map = "state")
 us_counties <- map_data(map = "county")
@@ -91,11 +92,6 @@ ggplot(
     fill = "firebrick"
   ) +
   
-  geom_density(
-    color = "black",
-    fill = "firebrick"
-  ) +
-  
   labs(
     x = "Age of Victim",
     y = "Number of Crimes",
@@ -146,7 +142,6 @@ circle_data <- data.frame(
   y = circle_center[2],
   radius = circle_radius
 )
-
 
 
 
@@ -282,49 +277,102 @@ ggplot(data = crime_times,
 ```
 
 
-```{r density usa map crimes}
+```{r descent bar plot}
 
-crime_data |>
-  slice_sample(n = 1000) ->
-  crime_slice
-
+crime_data_descent <-
+  
+  crime_data |>
+  
+  group_by(victim_descent) |>
+  
+  mutate(
+    occurrences = n()
+  ) |>
+  
+  distinct(victim_descent,.keep_all = TRUE) |>
+  
+  select(victim_descent, occurrences)
+  
 
 ggplot(
-  data = us_counties |> filter(subregion == "los angeles"),
+  data = crime_data_descent,
   mapping = aes(
-    x = long,
-    y = lat,
-    group = group
+    y = reorder(x = victim_descent, X = occurrences),
+    x = occurrences,
+    fill = occurrences,
+    label = occurrences
   )
 ) +
-
-  # Use geom_polygon to draw the lines for each state
-  geom_polygon(
-    color = "gray17",
-    size = 1,
-    fill = "firebrick4"
-  ) + 
   
-  # Add the correct theme below
-  theme_map() +
+  geom_col() +
+  
+  geom_text(
+    aes(x = occurrences + 5000, label = occurrences),
+    color = "white", 
+    size = 3.25  
+  ) +
+  
+  theme_bw() +
   
   theme(
-    plot.background = element_rect(fill = "gray18")
+    plot.title = element_text(color = "gray" ,hjust = 0.5),
+    plot.background = element_rect(fill = "gray17"),
+    panel.background = element_rect(fill = "gray17"),
+    axis.text = element_text(color = "gray"),
+    axis.line.x = element_line(color = "gray"),
+    axis.line.y = element_line(color = "gray"),
+    axis.title.x = element_text(color = "gray"),
+    axis.title.y = element_text(color = "gray"),
+    axis.ticks.y = element_line(color = "gray"),
+    axis.ticks.x = element_line(color = "gray"),
+    legend.position = "none",
+    panel.grid.major.x = element_line(color = "gray30"),
+    panel.grid.major.y = element_line(color = "gray30"),
+    panel.grid.minor.x =element_line(color = "gray30")
+  ) +
+  
+  labs(
+    x = "Crimes Commited",
+    y = "Victim Descent",
+    title = "Number of Crimes Against Victim Based on Descent in LA"
   ) +
 
-  # Add this function to make the map look more like what it would be on a globe
-  coord_map(projection = "albers", 
-            lat0 = 39, lat1 = 45) +
+  scale_y_discrete(
+    labels = c(
+      "H" = "Hispanic",
+      "B" = "Black",
+      "O" = "Other",
+      "A" = "Other Asian",
+      "W" = "White",
+      "X" = "Unknown",
+      "K" = "Korean",
+      "F" = "Filipino",
+      "C" = "Chinese",
+      "J" = "Japanese",
+      "V" = "Viatnamese",
+      "I" = "American Indian/\nAlaskan Native",
+      "Z" = "Asian Indian",
+      "P" = "Pacific Islander",
+      "U" = "Hawaiian",
+      "G" = "Guamanian",
+      "D" = "Cambodian",
+      "S" = "Samoan",
+      "L" = "Laotian"
+    ),
+    expand = c(0,0,0,0)
+  ) +
   
-  geom_point(
-    data = crime_data |> filter(str_detect(crime_description, "BURGLARY") & victim_age >= 18 & victim_age < 25),
-    mapping = aes(
-      x = long,
-      y = lat,
-      group = area_name
-    )
-  ) 
+  scale_fill_gradient(
+    low = "gold",
+    high = "firebrick1"  
+  ) +
   
+  scale_x_continuous(
+    expand = c(0.0075,0,0.05,0),
+    breaks = c(0,25000,50000,75000,100000,125000,150000)
+  )
+
+#Vict Descent - Descent Code: A - Other Asian B - Black C - Chinese D - Cambodian F - Filipino G - Guamanian H - #Hispanic/Latin/Mexican I - American Indian/Alaskan Native J - Japanese K - Korean L - Laotian O - Other P - Pacific #Islander S - Samoan U - Hawaiian V - Vietnamese W - White X - Unknown Z - Asian Indian
 
 
 
@@ -337,9 +385,9 @@ crime_data_date <-
   crime_data |>
   
   mutate(date = as.Date(date_occurred, format = "%m/%d/%Y %I:%M:%S %p"),
-         months_since_2020 = (year(date) - 2020) * 12 + month(date))|>
+         months_since_2020 = (year(date) - 2020) * 12 + month(date)) |>
   
-  filter(victim_sex == "M" | victim_sex == "F")
+  filter((victim_sex == "M" | victim_sex == "F") & months_since_2020 <= 45)
 
 
 
@@ -362,21 +410,47 @@ ggplot(
   geom_line() +
   
   
-  theme_bw() +
+  theme_classic() +
   
   labs(
     x = "Months since January 2020",
     y = "Crime Count",
-    color = "Victim Sex"
+    color = "Victim Sex",
+    title = "Number of Crimes Commited Against Each Sex Since 2020"
+  ) +
+  
+  theme(
+    plot.title = element_text(color = "gray" ,hjust = 0.5),
+    legend.position = c(0.75, 0.25),
+    plot.background = element_rect(fill = "gray17"),
+    panel.background = element_rect(fill = "gray17"),
+    axis.text = element_text(color = "gray"),
+    axis.line.x = element_line(color = "gray"),
+    axis.line.y = element_line(color = "gray"),
+    axis.title.x = element_text(color = "gray"),
+    axis.title.y = element_text(color = "gray"),
+    legend.background = element_rect(fill = "gray17"),
+    legend.title = element_text(color = "gray"),
+    legend.text = element_text(color = "gray")
   ) +
   
   scale_x_continuous(
-    expand = c(0,0,.05,0)
+    expand = c(0,0,0,0),
+    breaks = c(seq(0,50,5))
   ) +
   
   scale_y_continuous(
-    expand = c(0.0005,0,0.05,0)
+    expand = c(0.05,0,0.05,0),
+    breaks = c(seq(2500,4000,250))
+  ) +
+  
+  scale_color_manual(
+    values = c("M" = "steelblue1", "F" = "hotpink"),
+    labels = c("F" = "Female", "M" = "Male")
   )
 
 
 ```
+In this graph, we observe the number of crimes committed on male and female persons since 2020. The part that strikes me about this graph is during the time of the pandemic both male and female crimes drop significantly. We can also observe that around a year and a half later (15 months on this graph) the crimes start to pick up again which is when mandates started to become more lenient and people were leaving there houses more and more. 
+
+Although it makes sense in this graph that males are on the receiving end of most crimes, it strikes me that females around 2 years after 2020 start to experience more crimes than the males, even spiking at around 34 months. I don't think there is any particular causation of this, but it is interesting nonetheless. Finally, there is a significant drop off at 45 months, but that is most likely because crimes were not reported as much because of the new year. 
