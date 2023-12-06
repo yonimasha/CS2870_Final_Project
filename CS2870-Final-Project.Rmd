@@ -454,3 +454,88 @@ ggplot(
 In this graph, we observe the number of crimes committed on male and female persons since 2020. The part that strikes me about this graph is during the time of the pandemic both male and female crimes drop significantly. We can also observe that around a year and a half later (15 months on this graph) the crimes start to pick up again which is when mandates started to become more lenient and people were leaving there houses more and more. 
 
 Although it makes sense in this graph that males are on the receiving end of most crimes, it strikes me that females around 2 years after 2020 start to experience more crimes than the males, even spiking at around 34 months. I don't think there is any particular causation of this, but it is interesting nonetheless. Finally, there is a significant drop off at 45 months, but that is most likely because crimes were not reported as much because of the new year. 
+
+``` {r dumbbell plot age, gender, and crime}
+crime_data |>
+  
+  group_by(victim_sex) |> 
+  
+  mutate(
+    condensed_crime = case_when(
+      grepl("battery&sexual|sex|lewd|indecent|peeping|oral", tolower(crime_description)) ~ "Sexual Assault",
+      grepl("assault|battery", tolower(crime_description)) ~ "Assault",
+      grepl("robbery|theft|extortion|stolen|stole|steal|pickpocket", tolower(crime_description)) ~ "Robbery",
+      grepl("rape", tolower(crime_description)) ~ "Rape",
+      grepl("vandalism", tolower(crime_description)) ~ "Vandalism",
+      grepl("trespassing", tolower(crime_description)) ~ "Tresspassing",
+      grepl("arson", tolower(crime_description)) ~ "Arson",
+      grepl("neglect|abuse", tolower(crime_description)) ~ "Abuse/Neglect",
+      grepl("weapon|firearm|bomb", tolower(crime_description)) ~ "Weapons Related",
+      grepl("kidnap|child steal", tolower(crime_description)) ~ "Kidnapping"
+    )
+  ) |>
+  
+  group_by(condensed_crime) |>
+  
+  summarise(
+    avg_age_male = mean(ifelse(victim_sex == "M" & !is.na(victim_age), victim_age, NA), na.rm = TRUE),
+    avg_age_female = mean(ifelse(victim_sex == "F" & !is.na(victim_age), victim_age, NA), na.rm = TRUE)
+  ) |>
+  
+  dplyr::select(condensed_crime, avg_age_male, avg_age_female) |>
+  
+  filter(!is.na(condensed_crime)) |>
+  
+  distinct(condensed_crime, .keep_all = T) ->
+  
+  crime_data_crimes_clean
+
+
+ggplot(
+  data = crime_data_crimes_clean,
+  mapping = aes(
+    y = fct_reorder(condensed_crime, avg_age_male, .fun = min)
+  )
+) +
+  
+  geom_segment(
+    mapping = aes(
+      x = avg_age_male, xend = avg_age_female, yend = condensed_crime
+    ),
+    color = "gray"
+  ) +
+  
+  geom_point(
+    mapping = aes(x = avg_age_female),
+    color = "hotpink"
+  ) +
+  
+  geom_point(
+    mapping = aes(x = avg_age_male),
+    color = "steelblue1"
+  ) +
+  
+  theme_classic() +
+  
+  labs(
+    title = "Female Avg Age Vs Male Avg Age For Each Crime",
+    y = "Type of Crime",
+    x = "Age"
+  ) +
+  
+  theme(
+    plot.title = element_text(color = "gray" ,hjust = 0.5),
+    plot.background = element_rect(fill = "gray17"),
+    panel.background = element_rect(fill = "gray17"),
+    axis.text = element_text(color = "gray"),
+    axis.line.x = element_line(color = "gray"),
+    axis.line.y = element_line(color = "gray"),
+    axis.title.x = element_text(color = "gray"),
+    axis.title.y = element_text(color = "gray"),
+    axis.ticks = element_blank()
+  ) +
+  
+  scale_x_continuous(
+    breaks = seq(0,50,5)
+  )
+```
