@@ -1,14 +1,16 @@
 ---
 title: "CS2870-Final-Project"
-output: pdf_document
-authors: Yoni Masha, Charlie Corriero 
+output:
+  html_document:
+    df_print: paged
 date: "2023-11-14"
+authors: Yoni Masha, Charlie Corriero
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse, dplyr, usmap, maps, ggthemes, sf, lubridate, scales)
-crime_data_sample <- read_csv("Crime_Data_from_2020_to_Present (1).csv")
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+pacman::p_load(tidyverse, dplyr, usmap, maps, ggthemes, sf, lubridate, scales, class, caret, rpart, rpart.plot)
+crime_data_sample <- read_csv("Crime_Data_from_2020_to_Present.csv")
 
 us_states <- map_data(map = "state")
 us_counties <- map_data(map = "county")
@@ -17,7 +19,7 @@ theme_set(theme_map())
 ```
 
 
-## Intro
+# Intro
 
 The source for our data is kaggle.com and the data set was created on October 12, 2023. This data is not a sample as it is all the crime data from the year 2020 to the present (2023), and because of this, it does not have any sampling bias. The data from this set was collected from data.gov and was created in November of 2020 and has been regularly updated since, and is maintained by LAPD OpenData. This was an observational study looking at all the crimes that occurred from 2020-2023. This data is of interest to us because we think that analyzing crime data could help people to better understand when/where/why crimes occur and what can be predicted based on the data. As for cleaning the data, we first cut the data set in half because it was too large and making graphs, manipulating the data, etc was taking longer than we wanted. Next we used dplyr::select() to keep the columns that we thought were relevant to the graphs we were going to make and the machine learning we planned to implement. After that we used rename() to rename the columns to something more readable and intuitive and used mutate() to remove unnecessary white space from our 'location' column. Lastly, we used filter to keep the rows where the age was in the range we wanted (0 to 90), the latitude and longitude weren't equal to zero, and the rows did not contain NA or no value.
 
@@ -28,10 +30,12 @@ RNGversion("4.1.0"); set.seed(2870)
 crime_data_sample |>
   slice_sample(prop = 0.5)
 
-
+# Selecting the columns we want to work with
 crime_data_sample |>
-  dplyr::select(`Date Rptd`, `DATE OCC`, `TIME OCC`, AREA, `AREA NAME`, `Crm Cd Desc`, `Vict Age`, `Vict Sex`, `Vict Descent`,
+  dplyr::select(`Date Rptd`, `DATE OCC`, `TIME OCC`, AREA, `AREA NAME`, `Crm Cd Desc`,`Crm Cd` ,`Vict Age`, `Vict Sex`, `Vict Descent`,
                 `Premis Desc`, `Weapon Desc`, `Status Desc`, LOCATION, LAT, LON) |>
+  
+    # Renaming the columns to be more readable
   rename(
     "date_reported" = `Date Rptd`, 
     "date_occurred" = `DATE OCC`,
@@ -39,6 +43,7 @@ crime_data_sample |>
     "area" = AREA,
     "area_name" = `AREA NAME`,
     "crime_description" = `Crm Cd Desc`,
+    "crime_code" = `Crm Cd`,
     "victim_age" = `Vict Age`,
     "victim_sex" = `Vict Sex`,
     "victim_descent" = `Vict Descent`,
@@ -50,8 +55,10 @@ crime_data_sample |>
     "long" = LON
   ) |>
   
+    # Removing unnecessary whitesapce from the 'location' column
   mutate(location = str_squish(location)) |>
   
+    # Removing NA values, keeping rows within our desired age range (0-90), and removing rows where the latitude and longitude is 0
   filter(
     victim_age > 0 & victim_age <= 90,
     !is.na(victim_sex),
@@ -62,6 +69,7 @@ crime_data_sample |>
     !is.na(area),
     !is.na(area_name),
     !is.na(crime_description),
+    !is.na(crime_code),
     !is.na(premise_desc),
     !is.na(victim_age),
     !is.na(status),
@@ -71,6 +79,7 @@ crime_data_sample |>
     !is.na(long)
   ) |>
   
+    # Taking 50% of the data so the code chunks run faster
   slice_sample(prop = .5) ->
   
   crime_data
@@ -80,24 +89,29 @@ crime_data_sample |>
 
 ```{r victim_sex/crime analysis}
 
+# Creating the graph
 ggplot(
   data = crime_data,
   mapping = aes(
     x = victim_age
   ),
 ) +
-  
+    
+  # Adding the histogram
   geom_histogram(
     color = "black",
-    fill = "firebrick"
+    fill = "firebrick",
+    bins = 30
   ) +
   
+  # Changing plot labels
   labs(
     x = "Age of Victim",
     y = "Number of Crimes",
     title = "Number of Crimes Committed on People of Age X"
   ) +
   
+  # Changing the look of the graph
   theme(
     plot.background = element_rect(fill = "gray17"),
     panel.background = element_rect(fill = "gray17"),
@@ -111,11 +125,13 @@ ggplot(
     plot.title = element_text(color = "gray", hjust = .5)
   ) +
   
+  # Fixing y scales
   scale_y_continuous(
     expand = c(0,0,0.25,0),
     breaks = c(0,5000,10000,15000,20000,25000,30000)
   ) +
   
+  # Fixing x scales
   scale_x_continuous(
     expand = c(0.025,0.05,0.05,0),
     breaks = c(0,10,20,30,40,50,60,70,80,90)
@@ -123,71 +139,9 @@ ggplot(
 
 ```
 
+# Interpretation
 
-```{r density usa map crimes}
-
-crime_data |>
-  slice_sample(n = 1000) ->
-  crime_slice
-
-
-
-# Found online
-circle_center <- c(20, 200)
-circle_radius <- 50
-
-# Create a data frame with the circle coordinates
-circle_data <- data.frame(
-  x = circle_center[1],
-  y = circle_center[2],
-  radius = circle_radius
-)
-
-
-
-ggplot(
-  data = us_states,
-  mapping = aes(
-    x = long,
-    y = lat,
-    group = group
-  )
-) +
-
-  # Use geom_polygon to draw the lines for each state
-  geom_polygon(
-    color = "black",
-    fill = "white"
-  ) + 
-  
-  # Add the correct theme below
-  theme_map() +
-   
-  # Add this function to make the map look more like what it would be on a globe
-  coord_map(projection = "albers", 
-            lat0 = 39, lat1 = 45) +
-  
-  geom_point(
-    data = crime_slice,
-    mapping = aes(
-      x = long,
-      y = lat,
-      group = area_name
-    )
-  ) +
-  
-  scale_x_continuous(
-    expand = c(0,0)
-  ) +
-  
-  scale_y_continuous(
-    expand = c(0,0)
-  ) +
-  
-  labs(title = expression("Our map graph before we realized that our crime data is" ~ italic("only") ~ " crimes commited in Los Angeles")) +
-  theme(plot.title = element_text(hjust = .5, size = 12))
-
-```
+It can be seen that the age range with the highest number of crimes committed against it is the age range of 25-43, and after 43 is steadily declines. Up until the age of adulthood (18) you are also less likely to have a crime committed against you which makes sense, since most crimes do not happen to children. The graph also resembles a Chi^2 distribution curve, Which suggests that the data isn't uniform and follows a specific pattern. This makes sense because 18-30 year olds are more likely to participate in criminal activity.
 
 
 
@@ -276,9 +230,12 @@ ggplot(data = crime_times,
 
 ```
 
+# Interpretation
+As seen in the graph there is a spike in crime rates after 5pm, this makes sense because as it gets darker out it is harder for the criminal to be seen committing the crime so they are more likely to try to commit it when its dark. There are some times in the graph that show little to no crime but I don't think that means that no crimes are committed. I would assume that the crimes committed during those times aren't well documented and during our data cleaning, they were removed because of that. This could be due to less police on duty during that time and more criminals getting away with their crimes. It seems like the safest times are from the hours of 2am to 8am, with a spike of crime from 9am to 3pm, and then it is at its highest from 7pm to 12am. 
 
 ```{r descent bar plot}
 
+# Making new data set to have a new column with the number of occurrences of crime for each descent
 crime_data_descent <-
   
   crime_data |>
@@ -289,6 +246,7 @@ crime_data_descent <-
     occurrences = n()
   ) |>
   
+  # Keeping one of each
   distinct(victim_descent,.keep_all = TRUE) |>
   
   select(victim_descent, occurrences)
@@ -306,6 +264,7 @@ ggplot(
   
   geom_col() +
   
+  # Adding text at the end for the very small values
   geom_text(
     aes(x = occurrences + 5000, label = occurrences),
     color = "white", 
@@ -337,6 +296,7 @@ ggplot(
     title = "Number of Crimes Against Victim Based on Descent in LA"
   ) +
 
+  # Changing formatting to make it more readable
   scale_y_discrete(
     labels = c(
       "H" = "Hispanic",
@@ -378,19 +338,25 @@ ggplot(
 
 ```
 
+## Interpretation
+In this graph, we observe the number of crimes committed against people of each of the descents listed. People of Hispanic descent have a significantly higher chance of having a crime committed against them, having 50000 more crimes than people of White descent which is in second place. It is also worth noting that Hispanic people make up around 40-50% of Los Angeles' population. It is still surprising however due to the fact that people of White descent still have a significantly lower chance of having a crime committed against them. After the "Other" category, we observe a huge drop off, most likely due to there not being a large population of people of those descents residing in Los Angeles county. 
 
-``` {r idk soem graph}
 
+``` {r Crime by Sex}
+
+# Making new data set to add the number of months since 2020 to each crime
 crime_data_date <- 
   crime_data |>
   
+  # Date formatting
   mutate(date = as.Date(date_occurred, format = "%m/%d/%Y %I:%M:%S %p"),
          months_since_2020 = (year(date) - 2020) * 12 + month(date)) |>
   
+  # Keeping it less than 45 because there are not enough observations past 45
   filter((victim_sex == "M" | victim_sex == "F") & months_since_2020 <= 45)
 
 
-
+# Created a new data set with the months since 2020, the sex of the victim, and the crime count to make a line
 crime_summarized <- crime_data_date |>
   
   group_by(months_since_2020, victim_sex) |>
@@ -451,6 +417,9 @@ ggplot(
 
 
 ```
+
+
+
 In this graph, we observe the number of crimes committed on male and female persons since 2020. The part that strikes me about this graph is during the time of the pandemic both male and female crimes drop significantly. We can also observe that around a year and a half later (15 months on this graph) the crimes start to pick up again which is when mandates started to become more lenient and people were leaving there houses more and more. 
 
 Although it makes sense in this graph that males are on the receiving end of most crimes, it strikes me that females around 2 years after 2020 start to experience more crimes than the males, even spiking at around 34 months. I don't think there is any particular causation of this, but it is interesting nonetheless. Finally, there is a significant drop off at 45 months, but that is most likely because crimes were not reported as much because of the new year. 
@@ -539,3 +508,204 @@ ggplot(
     breaks = seq(0,50,5)
   )
 ```
+
+
+```{r Normalizing/Standardizng and finding which is better}
+# Create normalization function
+normalize <- function(x){
+  return((x - min(x)) / (max(x) - min(x) ))
+}
+
+# Create standardization function
+standardize <- function(x) {
+  return((x - mean(x)) / sd(x))
+}
+
+```
+
+```{r knn sex by crime type and time}
+RNGversion("4.1.0"); set.seed(2870)
+
+crime_data |>
+
+  mutate(
+    condensed_crime = case_when(
+      grepl("battery&sexual|sex|lewd|indecent|peeping|oral", tolower(crime_description)) ~ "Sexual Assault",
+      grepl("assault|battery", tolower(crime_description)) ~ "Assault",
+      grepl("robbery|theft|extortion|stolen|stole|steal|pickpocket", tolower(crime_description)) ~ "Robbery",
+      grepl("rape", tolower(crime_description)) ~ "Rape",
+      grepl("vandalism", tolower(crime_description)) ~ "Vandalism",
+      grepl("trespassing", tolower(crime_description)) ~ "Tresspassing",
+      grepl("arson", tolower(crime_description)) ~ "Arson",
+      grepl("neglect|abuse", tolower(crime_description)) ~ "Abuse/Neglect",
+      grepl("weapon|firearm|bomb", tolower(crime_description)) ~ "Weapons Related",
+      grepl("kidnap|child steal", tolower(crime_description)) ~ "Kidnapping"
+    )
+  ) |>
+  filter(!is.na(condensed_crime),
+         victim_sex != "X") |>
+  dplyr::select(victim_age, crime_code, victim_sex) |>
+  slice_sample(n = 500)->
+  
+  crime_data_crimes_clean_knn
+
+ml_crimes <- 
+  crime_data_crimes_clean_knn
+
+# Normalized data
+crime_data_norm <- 
+  ml_crimes |>
+  mutate(across(.cols = where(is.numeric),
+                .fns = normalize))
+
+# Standardized data
+crime_data_stan <- 
+  ml_crimes |>
+  mutate(across(.cols = where(is.numeric),
+                .fns = standardize))
+
+
+# Setting up results data frame
+knn_results <- 
+  tibble(
+    k = 1:500,
+    norm_acc = rep(-1, length(k)),
+    stan_acc = rep(-1, length(k))
+  )
+
+# Putting the results of stan and norm data into a dataframe
+for(i in 1:nrow(knn_results)) {
+  
+  loop_norm <- 
+    knn.cv(
+      train = crime_data_norm |> dplyr::select(-victim_sex),
+      cl = crime_data_norm$victim_sex,
+      k = knn_results$k[i]
+    )
+  
+  knn_results[i, "norm_acc"] = mean(loop_norm == ml_crimes$victim_sex)
+  
+  
+  loop_stan <- 
+    knn.cv(
+      train = crime_data_stan |> dplyr::select(-victim_sex),
+      cl = crime_data_stan$victim_sex,
+      k = knn_results$k[i]
+    )
+  
+  knn_results[i, "stan_acc"] = mean(loop_stan == ml_crimes$victim_sex)
+  
+}
+
+
+# Finding the max 
+norm_max <- max(knn_results$norm_acc)
+stan_max <- max(knn_results$stan_acc)
+
+norm_max_x <- mean(knn_results$k[knn_results$norm_acc == norm_max])
+stan_max_x <- knn_results$k[knn_results$stan_acc == stan_max]
+
+c("Maximum norm accuracy" = norm_max,
+  "K value associated with the maximum of norm" = norm_max_x,
+  "Maximum stan accuracy" = stan_max,
+  "K value associated with the maximum of stan" = stan_max_x)
+
+
+```
+
+```{r knn 2}
+RNGversion("4.1.0"); set.seed(2870)
+# Making a new data frame with only the variables needed
+crime_data |>
+  dplyr::select(time_occurred, victim_age, victim_sex) |>
+  mutate(time_occurred = as.numeric(time_occurred)) |>
+  filter(victim_sex != "X") |>
+  slice_sample(n = 500)->
+  ml_crime
+
+# Using the same data for the testing data frame
+crime_for_knn <- 
+  ml_crime
+
+
+knn_crime <- 
+  knn(
+    train = crime_data_stan |> select(where(is.numeric)),
+    test = crime_data_stan |> select(where(is.numeric)),
+    cl = crime_for_knn$victim_sex,
+    k = 142
+  )
+
+table(actual = crime_for_knn$victim_sex,
+      predicted = knn_crime)
+
+```
+
+
+
+```{r classification tree}
+RNGversion("4.1.0"); set.seed(2870)
+tree_full <- 
+  rpart(
+    formula = victim_sex ~ time_occurred + victim_age,
+    data = ml_crime,
+    method = "class",
+    parms = list(split = "information"),
+    minsplit = 2,
+    minbucket = 1,
+    cp = -1
+  )
+
+rpart.plot(
+  x = tree_full
+)
+```
+
+```{r pruning}
+
+tree_full$cptable |>
+  data.frame() |>
+  slice_min(xerror, n = 1) |>
+  mutate(xcutoff = xerror + xstd) |>
+  pull(xcutoff) |>
+  head(1) ->
+  xcutoff
+
+tree_full$cptable |>
+  data.frame() |>
+  filter(xerror < xcutoff) |>
+  slice(1) |>
+  pull(CP) ->
+  cp_cutoff
+
+```
+```{r pruned tree}
+prune(tree = tree_full,
+      cp = cp_cutoff) ->
+  tree_pruned
+
+
+# Plot the tree
+rpart.plot(
+  x = tree_pruned
+)
+
+```
+
+
+# Interpretation
+In this graph, we observe the number of crimes committed on male and female persons since 2020. The part that strikes me about this graph is during the time of the pandemic both male and female crimes drop significantly. We can also observe that around a year and a half later (15 months on this graph) the crimes start to pick up again which is when mandates started to become more lenient and people were leaving there houses more and more. 
+
+Although it makes sense in this graph that males are on the receiving end of most crimes, it strikes me that females around 2 years after 2020 start to experience more crimes than the males, even spiking at around 34 months. I don't think there is any particular causation of this, but it is interesting nonetheless. Finally, there is a significant drop off at 45 months, but that is most likely because crimes were not reported as much because of the new year. 
+
+
+
+
+## Conclusion
+
+During our analysis, we found that middle aged citizens are most likely to have a crime committed against them, the ages with the highest amount of crimes committed against them were ages 25-43. We also found that the most dangerous times of the day in terms of crime are from the hours of 7pm to midnight with the highest number of crimes being committed during these hours, the safest times are 2am to 8am. According to the data, Hispanic people are most likely to have a crime committed against them, Being follow by White and Black people respectively. During Covid the crime rates overall dropped significantly. They went back up over the years and eventually the crime rates against females rose above those of males.
+
+
+## Limitations and Reccomendation
+
+The first limitation that we found was that not all of the crimes we well documented, with many missing key information about the committed crime. The crimes with little documentation were removed from our data set during cleaning. We also found that at certain times crimes seemed to not be documented well either, as seen in the crimes by time graph. Future researches could include crimes from areas that are not only in Los Angeles. Researches could also look deeper at each of the graphs that we made and find the underlying 'why' to the trends that are seen in them.
