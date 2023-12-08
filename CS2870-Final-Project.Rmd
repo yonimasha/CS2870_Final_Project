@@ -8,14 +8,11 @@ authors: Yoni Masha, Charlie Corriero
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
 pacman::p_load(tidyverse, dplyr, usmap, maps, ggthemes, sf, lubridate, scales, class, caret, rpart, rpart.plot)
 crime_data_sample <- read_csv("Crime_Data_from_2020_to_Present.csv")
-
-us_states <- map_data(map = "state")
-us_counties <- map_data(map = "county")
-
-theme_set(theme_map())
 ```
 
 
@@ -35,7 +32,7 @@ crime_data_sample |>
   dplyr::select(`Date Rptd`, `DATE OCC`, `TIME OCC`, AREA, `AREA NAME`, `Crm Cd Desc`,`Crm Cd` ,`Vict Age`, `Vict Sex`, `Vict Descent`,
                 `Premis Desc`, `Weapon Desc`, `Status Desc`, LOCATION, LAT, LON) |>
   
-    # Renaming the columns to be more readable
+  # Renaming the columns to be more readable
   rename(
     "date_reported" = `Date Rptd`, 
     "date_occurred" = `DATE OCC`,
@@ -55,10 +52,10 @@ crime_data_sample |>
     "long" = LON
   ) |>
   
-    # Removing unnecessary whitesapce from the 'location' column
+  # Removing unnecessary whitesapce from the 'location' column
   mutate(location = str_squish(location)) |>
   
-    # Removing NA values, keeping rows within our desired age range (0-90), and removing rows where the latitude and longitude is 0
+  # Removing NA values, keeping rows within our desired age range (0-90), and removing rows where the latitude and longitude is 0
   filter(
     victim_age > 0 & victim_age <= 90,
     !is.na(victim_sex),
@@ -79,13 +76,18 @@ crime_data_sample |>
     !is.na(long)
   ) |>
   
-    # Taking 50% of the data so the code chunks run faster
+  # Taking 50% of the data so the code chunks run faster
   slice_sample(prop = .5) ->
   
   crime_data
-
 ```
 
+# Graphs
+
+
+### About
+
+The following graph shows the number of crimes committed on people of varying ages. The ages range from 0-90 and the number of crimes committed range from 0-300,000. We created this graph to get a general understanding of who the most crimes were being committed against. We expected the bulk of the crimes to be committed against middle-aged people and we were correct in our prediction. 
 
 ```{r victim_sex/crime analysis}
 
@@ -96,7 +98,7 @@ ggplot(
     x = victim_age
   ),
 ) +
-    
+  
   # Adding the histogram
   geom_histogram(
     color = "black",
@@ -136,16 +138,20 @@ ggplot(
     expand = c(0.025,0.05,0.05,0),
     breaks = c(0,10,20,30,40,50,60,70,80,90)
   )
-
 ```
 
-# Interpretation
+### Interpretation
 
 It can be seen that the age range with the highest number of crimes committed against it is the age range of 25-43, and after 43 is steadily declines. Up until the age of adulthood (18) you are also less likely to have a crime committed against you which makes sense, since most crimes do not happen to children. The graph also resembles a Chi^2 distribution curve, Which suggests that the data isn't uniform and follows a specific pattern. This makes sense because 18-30 year olds are more likely to participate in criminal activity.
 
 
 
+### About
+
+This graph shows the number of crimes committed during each hour of the day. The number of crimes range from 0-7000. Like the previous graph, our initial predictions were correct. We thought that there would be a spike in crimes as the it got closer to midnight and the evening hours. We made this graph to see if there were any trends or patterns in the times that crimes occured.
+
 ```{r time of day for crime}
+
 # Making a new data-frame for the times and converting them from military to regular
 crime_data |>
   dplyr::select(time_occurred, ) |>
@@ -195,43 +201,47 @@ ggplot(data = crime_times,
        fill = 'Occurences') + 
   
   theme(
-        # Text elements
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.text = element_text(color = "gray"),
-        legend.title = element_text(color = "gray"),
-        plot.title = element_text(hjust=0.5, size = 15, color = "gray"),
-        axis.text = element_text(color = "gray"),
-        
-        # Rect elements
-        legend.background = element_rect(fill = "gray17"),
-        panel.background = element_rect(fill = "gray17"),
-        plot.background = element_rect(fill = "gray17"),
-        
-        # Blank elements
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        
-        # Line elements
-        axis.line.x = element_line(color = "gray"),
-        axis.line.y = element_line(color = "gray"),
-        axis.title.x = element_text(color = "gray"),
-        axis.title.y = element_text(color = "gray"),
-        
-        # Other elements
-        legend.key.height = unit(1, "cm")
-        ) +
+    # Text elements
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.text = element_text(color = "gray"),
+    legend.title = element_text(color = "gray"),
+    plot.title = element_text(hjust=0.5, size = 15, color = "gray"),
+    axis.text = element_text(color = "gray"),
+    
+    # Rect elements
+    legend.background = element_rect(fill = "gray17"),
+    panel.background = element_rect(fill = "gray17"),
+    plot.background = element_rect(fill = "gray17"),
+    
+    # Blank elements
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    
+    # Line elements
+    axis.line.x = element_line(color = "gray"),
+    axis.line.y = element_line(color = "gray"),
+    axis.title.x = element_text(color = "gray"),
+    axis.title.y = element_text(color = "gray"),
+    
+    # Other elements
+    legend.key.height = unit(1, "cm")
+  ) +
   
-
-  # Changing the breaks, labels, and colors for the graph  
+  
+  # Changing the ticks, labels, and colors for the graph  
   scale_fill_gradient(low = "green", high = "red",
                       limits = c(0, 7500), 
                       breaks = c(0, 1000, 2000, 3000, 4000, 5000, 6000, 7000),
                       labels = c(0, 1000, 2000, 3000, 4000, 5000, 6000, 7000))
-
 ```
 
-# Interpretation
+### Interpretation
 As seen in the graph there is a spike in crime rates after 5pm, this makes sense because as it gets darker out it is harder for the criminal to be seen committing the crime so they are more likely to try to commit it when its dark. There are some times in the graph that show little to no crime but I don't think that means that no crimes are committed. I would assume that the crimes committed during those times aren't well documented and during our data cleaning, they were removed because of that. This could be due to less police on duty during that time and more criminals getting away with their crimes. It seems like the safest times are from the hours of 2am to 8am, with a spike of crime from 9am to 3pm, and then it is at its highest from 7pm to 12am. 
+
+
+### About
+
+
 
 ```{r descent bar plot}
 
@@ -250,8 +260,8 @@ crime_data_descent <-
   distinct(victim_descent,.keep_all = TRUE) |>
   
   select(victim_descent, occurrences)
-  
 
+# Creating the graph
 ggplot(
   data = crime_data_descent,
   mapping = aes(
@@ -262,6 +272,7 @@ ggplot(
   )
 ) +
   
+  # Adding bars
   geom_col() +
   
   # Adding text at the end for the very small values
@@ -271,6 +282,7 @@ ggplot(
     size = 3.25  
   ) +
   
+  # Setting the theme
   theme_bw() +
   
   theme(
@@ -290,12 +302,13 @@ ggplot(
     panel.grid.minor.x =element_line(color = "gray30")
   ) +
   
+  # Setting/changing labels
   labs(
     x = "Crimes Commited",
     y = "Victim Descent",
     title = "Number of Crimes Against Victim Based on Descent in LA"
   ) +
-
+  
   # Changing formatting to make it more readable
   scale_y_discrete(
     labels = c(
@@ -322,25 +335,27 @@ ggplot(
     expand = c(0,0,0,0)
   ) +
   
+  # Adding color
   scale_fill_gradient(
     low = "gold",
     high = "firebrick1"  
   ) +
   
+  # Setting ticks for the x-axis
   scale_x_continuous(
     expand = c(0.0075,0,0.05,0),
     breaks = c(0,25000,50000,75000,100000,125000,150000)
   )
 
 #Vict Descent - Descent Code: A - Other Asian B - Black C - Chinese D - Cambodian F - Filipino G - Guamanian H - #Hispanic/Latin/Mexican I - American Indian/Alaskan Native J - Japanese K - Korean L - Laotian O - Other P - Pacific #Islander S - Samoan U - Hawaiian V - Vietnamese W - White X - Unknown Z - Asian Indian
-
-
-
 ```
 
-## Interpretation
+### Interpretation
 In this graph, we observe the number of crimes committed against people of each of the descents listed. People of Hispanic descent have a significantly higher chance of having a crime committed against them, having 50000 more crimes than people of White descent which is in second place. It is also worth noting that Hispanic people make up around 40-50% of Los Angeles' population. It is still surprising however due to the fact that people of White descent still have a significantly lower chance of having a crime committed against them. After the "Other" category, we observe a huge drop off, most likely due to there not being a large population of people of those descents residing in Los Angeles county. 
 
+
+
+### About
 
 ``` {r Crime by Sex}
 
@@ -363,6 +378,8 @@ crime_summarized <- crime_data_date |>
   
   summarise(crime_count = n())
 
+
+# Creating the graph
 ggplot(
   data = crime_summarized,
   mapping = aes(
@@ -373,11 +390,13 @@ ggplot(
   )
 ) +
   
+  # Adding the line
   geom_line() +
   
-  
+  # Setting the theme
   theme_classic() +
   
+  # Adding/changing the labels
   labs(
     x = "Months since January 2020",
     y = "Crime Count",
@@ -385,6 +404,7 @@ ggplot(
     title = "Number of Crimes Commited Against Each Sex Since 2020"
   ) +
   
+  # More theme adjustments
   theme(
     plot.title = element_text(color = "gray" ,hjust = 0.5),
     legend.position = c(0.75, 0.25),
@@ -400,25 +420,26 @@ ggplot(
     legend.text = element_text(color = "gray")
   ) +
   
+  # Setting the ticks for the x-axis
   scale_x_continuous(
     expand = c(0,0,0,0),
     breaks = c(seq(0,50,5))
   ) +
   
+  # Setting the ticks for the y-axis
   scale_y_continuous(
     expand = c(0.05,0,0.05,0),
     breaks = c(seq(2500,4000,250))
   ) +
   
+  # Adding the color
   scale_color_manual(
     values = c("M" = "steelblue1", "F" = "hotpink"),
     labels = c("F" = "Female", "M" = "Male")
   )
-
-
 ```
 
-
+### Interpretation
 
 In this graph, we observe the number of crimes committed on male and female persons since 2020. The part that strikes me about this graph is during the time of the pandemic both male and female crimes drop significantly. We can also observe that around a year and a half later (15 months on this graph) the crimes start to pick up again which is when mandates started to become more lenient and people were leaving there houses more and more. 
 
@@ -426,15 +447,18 @@ Although it makes sense in this graph that males are on the receiving end of mos
 
 
 
+### About
+
 ``` {r dumbbell plot age, gender, and crime}
 
+# Cleaning data to group like crimes into one category
 crime_data |>
   
   group_by(victim_sex) |> 
   
   mutate(
     condensed_crime = case_when(
-      grepl("battery&sexual|sex|lewd|peeping|oral", tolower(crime_description)) ~ "Sexual Assault",
+      grepl("battery&sexual|sex|lewd|indecent|peeping|oral", tolower(crime_description)) ~ "Sexual Assault",
       grepl("assault|battery", tolower(crime_description)) ~ "Assault",
       grepl("robbery|theft|extortion|stolen|stole|steal|pickpocket", tolower(crime_description)) ~ "Robbery",
       grepl("rape", tolower(crime_description)) ~ "Rape",
@@ -443,8 +467,7 @@ crime_data |>
       grepl("arson", tolower(crime_description)) ~ "Arson",
       grepl("neglect|abuse", tolower(crime_description)) ~ "Abuse/Neglect",
       grepl("weapon|firearm|bomb", tolower(crime_description)) ~ "Weapons Related",
-      grepl("kidnap|child steal", tolower(crime_description)) ~ "Kidnapping",
-      grepl("traffic", tolower(crime_description)) ~ "Human Trafficking",
+      grepl("kidnap|child steal", tolower(crime_description)) ~ "Kidnapping"
     )
   ) |>
   
@@ -464,6 +487,7 @@ crime_data |>
   crime_data_crimes_clean
 
 
+# Creating the graph
 ggplot(
   data = crime_data_crimes_clean,
   mapping = aes(
@@ -471,6 +495,7 @@ ggplot(
   )
 ) +
   
+  # Adding the lines for the dumbell plot
   geom_segment(
     mapping = aes(
       x = avg_age_male, xend = avg_age_female, yend = condensed_crime
@@ -478,24 +503,29 @@ ggplot(
     color = "gray"
   ) +
   
+  # Adding the points for females
   geom_point(
     mapping = aes(x = avg_age_female),
     color = "hotpink"
   ) +
   
+  # Adding the points for males
   geom_point(
     mapping = aes(x = avg_age_male),
     color = "steelblue1"
   ) +
   
+  # Adding the theme
   theme_classic() +
   
+  # Adding/changing labels
   labs(
     title = "Female Avg Age Vs Male Avg Age For Each Crime",
     y = "Type of Crime",
     x = "Age"
   ) +
   
+  # More theme adjustments
   theme(
     plot.title = element_text(color = "gray" ,hjust = 0.5),
     plot.background = element_rect(fill = "gray17"),
@@ -508,22 +538,41 @@ ggplot(
     axis.ticks = element_blank()
   ) +
   
+  # Setting the ticks on the x-axis
   scale_x_continuous(
     breaks = seq(0,50,5)
   )
-
 ```
-# Interpretation
 
-The graph above is a dumbbell plot comparing the average age for both sexes of victims for each type of crime. The line represents the difference between the two. Most of the average ages seem to be very similar for male and female, with sexual assault and assault crimes having the biggest difference between the two. It is not surprising to see a lower age for females in those two categories. Rather it is surprising to see such a high average age for males in sexual assault. The reason for this is unknown, and requires further research to determine the cause. It is also surprising to see such a high average age in kidnapping. Typically one would assume most victims who get kidnapped are on the younger side.
+### Interpretation
 
-The other crimes make a lot more sense. Abuse and neglect are mostly crimes against children, so victims of both sexes are extremely likely to be a lot younger. Other crimes like trespassing, arson, vandalism, and robbery most likely occur to people who own businesses and have a lot of personal belongings. Those people are typically on the older side. In conclusion, this graph shows the relationship between the average ages for both sexes quite well. It reinforces things we predicted and some parts surprised us. 
 
-```{r knn sex by crime type and time}
+
+
+
+# Machine Learning
+
+```{r Normalizing/Standardizng and finding which is better}
+# Create normalization function
+normalize <- function(x){
+  return((x - min(x)) / (max(x) - min(x) ))
+}
+
+# Create standardization function
+standardize <- function(x) {
+  return((x - mean(x)) / sd(x))
+}
+```
+
+
+## Knn
+
+```{r knn setup}
 RNGversion("4.1.0"); set.seed(2870)
 
+# Cleaning data to group like crimes into one category
 crime_data |>
-
+  
   mutate(
     condensed_crime = case_when(
       grepl("battery&sexual|sex|lewd|indecent|peeping|oral", tolower(crime_description)) ~ "Sexual Assault",
@@ -538,15 +587,22 @@ crime_data |>
       grepl("kidnap|child steal", tolower(crime_description)) ~ "Kidnapping"
     )
   ) |>
+  
+  # Filtering out where the crime is NA or the victim sex is "X"
   filter(!is.na(condensed_crime),
          victim_sex != "X") |>
-  dplyr::select(victim_age, crime_code, victim_sex) |>
-  slice_sample(n = 500)->
   
+  # Selecting the columns we want
+  dplyr::select(victim_age, crime_code, victim_sex) |>
+  
+  # Taking a sample for knn
+  slice_sample(n = 500)->
   crime_data_crimes_clean_knn
 
+# Creating a second dataset that matches the one we just created
 ml_crimes <- 
   crime_data_crimes_clean_knn
+
 
 # Normalized data
 crime_data_norm <- 
@@ -605,25 +661,30 @@ c("Maximum norm accuracy" = norm_max,
   "K value associated with the maximum of norm" = norm_max_x,
   "Maximum stan accuracy" = stan_max,
   "K value associated with the maximum of stan" = stan_max_x)
-
-
 ```
 
-```{r knn 2}
+```{r knn}
 RNGversion("4.1.0"); set.seed(2870)
+
 # Making a new data frame with only the variables needed
 crime_data |>
+  
   dplyr::select(time_occurred, victim_age, victim_sex) |>
+  
   mutate(time_occurred = as.numeric(time_occurred)) |>
+  
   filter(victim_sex != "X") |>
+  
   slice_sample(n = 500)->
   ml_crime
+
 
 # Using the same data for the testing data frame
 crime_for_knn <- 
   ml_crime
 
 
+#  Performing knn
 knn_crime <- 
   knn(
     train = crime_data_stan |> select(where(is.numeric)),
@@ -632,15 +693,20 @@ knn_crime <-
     k = 142
   )
 
-table(actual = crime_for_knn$victim_sex,
-      predicted = knn_crime)
 
+# Showing results
+table(actual = crime_for_knn$victim_sex,
+      predicted = knn_crime) |>
+  
+  confusionMatrix()
 ```
 
-
+## Classification Trees
 
 ```{r classification tree}
 RNGversion("4.1.0"); set.seed(2870)
+
+# Creating the tree
 tree_full <- 
   rpart(
     formula = victim_sex ~ time_occurred + victim_age,
@@ -652,13 +718,17 @@ tree_full <-
     cp = -1
   )
 
+
+# Showing the tree
 rpart.plot(
   x = tree_full
 )
 ```
 
 ```{r pruning}
+RNGversion("4.1.0"); set.seed(2870)
 
+# Finding the x-cutoff value
 tree_full$cptable |>
   data.frame() |>
   slice_min(xerror, n = 1) |>
@@ -667,30 +737,39 @@ tree_full$cptable |>
   head(1) ->
   xcutoff
 
+# Finding the cp-cutoff value
 tree_full$cptable |>
   data.frame() |>
   filter(xerror < xcutoff) |>
   slice(1) |>
   pull(CP) ->
   cp_cutoff
-
 ```
+
 ```{r pruned tree}
+RNGversion("4.1.0"); set.seed(2870)
+
+# Pruning the tree
 prune(tree = tree_full,
       cp = cp_cutoff) ->
   tree_pruned
 
 
-# Plot the tree
+# Plotting the tree
 rpart.plot(
   x = tree_pruned
 )
-
 ```
+
+
+## Regression
+
+
+
 
 ## Conclusion
 
-During our analysis, we found that middle aged citizens are most likely to have a crime committed against them, the ages with the highest amount of crimes committed against them were ages 25-43. We also found that the most dangerous times of the day in terms of crime are from the hours of 7pm to midnight with the highest number of crimes being committed during these hours, the safest times are 2am to 8am. According to the data, Hispanic people are most likely to have a crime committed against them, Being follow by White and Black people respectively. During Covid the crime rates overall dropped significantly. They went back up over the years and eventually the crime rates against females rose above those of males.
+During our analysis, we found that middle aged citizens are most likelqy to have a crime committed against them, the ages with the highest amount of crimes committed against them were ages 25-43. We also found that the most dangerous times of the day in terms of crime are from the hours of 7pm to midnight with the highest number of crimes being committed during these hours, the safest times are 2am to 8am. According to the data, Hispanic people are most likely to have a crime committed against them, Being follow by White and Black people respectively. During Covid the crime rates overall dropped significantly. They went back up over the years and eventually the crime rates against females rose above those of males.
 
 
 ## Limitations and Reccomendation
