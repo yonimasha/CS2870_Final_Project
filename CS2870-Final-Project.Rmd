@@ -546,7 +546,9 @@ ggplot(
 
 ### Interpretation
 
+The graph above is a dumbbell plot comparing the average age for both sexes of victims for each type of crime. The line represents the difference between the two. Most of the average ages seem to be very similar for male and female, with sexual assault and assault crimes having the biggest difference between the two. It is not surprising to see a lower age for females in those two categories. Rather it is surprising to see such a high average age for males in sexual assault. The reason for this is unknown, and requires further research to determine the cause. It is also surprising to see such a high average age in kidnapping. Typically one would assume most victims who get kidnapped are on the younger side.
 
+The other crimes make a lot more sense. Abuse and neglect are mostly crimes against children, so victims of both sexes are extremely likely to be a lot younger. Other crimes like trespassing, arson, vandalism, and robbery most likely occur to people who own businesses and have a lot of personal belongings. Those people are typically on the older side. In conclusion, this graph shows the relationship between the average ages for both sexes quite well. It reinforces things we predicted and some parts surprised us. 
 
 
 
@@ -764,7 +766,130 @@ rpart.plot(
 
 ## Regression
 
+# Predictions
 
+We believe that the linear model below will show some type of relationship between the victim's age and the other categorical factors. We chose to predict the victim's age as we found some interesting details in the above dumbbell plot. We will use 4 different models, one with just the type of crime, another with the type of crime and sex of the victim, one with both of the previous plus the time the crime occurred, and finally one with all three plus the descent of the victim.
+
+
+``` {r linear regression}
+RNGversion("4.1.0"); set.seed(2870)
+
+# Cleaning data to group like crimes into one category
+crime_data |>
+  
+  mutate(
+    condensed_crime = case_when(
+      grepl("battery&sexual|sex|lewd|indecent|peeping|oral", tolower(crime_description)) ~ "Sexual Assault",
+      grepl("assault|battery", tolower(crime_description)) ~ "Assault",
+      grepl("robbery|theft|extortion|stolen|stole|steal|pickpocket", tolower(crime_description)) ~ "Robbery",
+      grepl("rape", tolower(crime_description)) ~ "Rape",
+      grepl("vandalism", tolower(crime_description)) ~ "Vandalism",
+      grepl("trespassing", tolower(crime_description)) ~ "Tresspassing",
+      grepl("arson", tolower(crime_description)) ~ "Arson",
+      grepl("neglect|abuse", tolower(crime_description)) ~ "Abuse/Neglect",
+      grepl("weapon|firearm|bomb", tolower(crime_description)) ~ "Weapons Related",
+      grepl("kidnap|child steal", tolower(crime_description)) ~ "Kidnapping"
+    )
+  ) |>
+  
+  # Filtering out where the crime is NA or the victim sex is "X"
+  filter(!is.na(condensed_crime),
+         victim_sex != "X") |>
+  
+  # Taking a sample for regression
+  slice_sample(n = 1000)->
+  crime_data_crimes_clean_lm
+
+# Building models
+age_lm1 <-
+  lm(formula = victim_age ~ condensed_crime,
+     data = crime_data_crimes_clean_lm)
+
+age_lm2 <-
+  lm(formula = victim_age ~ condensed_crime + victim_sex,
+     data = crime_data_crimes_clean_lm)
+
+age_lm3 <-
+  lm(formula = victim_age ~ condensed_crime + victim_sex + time_occurred,
+     data = crime_data_crimes_clean_lm)
+
+age_lm4 <-
+  lm(formula = victim_age ~ condensed_crime + victim_sex + time_occurred + victim_descent,
+     data = crime_data_crimes_clean_lm)
+
+# Looking at models R2 to determine best one
+glance(age_lm1)
+glance(age_lm2)
+glance(age_lm3) # 3 has the highest R2 and is the simplest between it and 4
+glance(age_lm4)
+
+MAE <- function(actual, predicted) {
+  mae <- abs(actual - predicted) |> mean()
+  mae_red <- mae/mean(abs(actual - mean(actual)))
+  return(list(mae = mae,
+              reduction = mae_red))
+}
+
+# mean absolute error
+MAE(actual = crime_data_crimes_clean_lm$victim_age,
+    predicted = age_lm3$fit)$mae
+
+# mean absolute error reduction
+MAE(actual = crime_data_crimes_clean_lm$victim_age,
+    predicted = age_lm3$fit)$reduction
+
+victim_ages <-
+  augment_columns(x = age_lm3,
+                  data = crime_data_crimes_clean_lm)
+
+
+victim_ages |>
+  summarize(
+    R2 = cor(victim_age, .fitted)^2,
+    MAE = MAE(actual = victim_age,
+              predicted = .fitted)$mae,
+    Reduction = MAE(actual = victim_age,
+                    predicted = .fitted)$reduction
+  )
+
+  
+ggplot(
+  data = victim_ages,
+  mapping = aes(
+    x = .fitted,
+    y = .resid
+  )
+) +
+  
+  geom_point() +
+  
+  geom_hline(
+    yintercept = 0,
+    color = "red",
+    linetype = "dashed",
+    linewidth = .5
+  ) +
+  
+  labs(
+    x = "Predicted Victim Age",
+    y = "Residual",
+    title = "Victim Age by Crime, Sex, and Time Occurrned"
+  ) +
+  
+  geom_smooth(
+    method = "loess",
+    formula = y ~ x,
+    se = F
+  ) +
+  
+  theme_bw()
+  
+
+```
+
+# Interpretation
+
+The graph above clearly indicates there is not a direct relationship between the victims age and type of crime, their sex, and the time the crime occurred. We don't think using knn regression would improve our accuracy as there is no clear relationship between the data points.
 
 
 ## Conclusion
