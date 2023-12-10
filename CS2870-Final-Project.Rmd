@@ -18,7 +18,7 @@ crime_data_sample <- read_csv("Crime_Data_from_2020_to_Present.csv")
 
 # Intro
 
-The source for our data is kaggle.com and the data set was created on October 12, 2023. This data is not a sample as it is all the crime data from the year 2020 to the present (2023), and because of this, it does not have any sampling bias. The data from this set was collected from data.gov and was created in November of 2020 and has been regularly updated since, and is maintained by LAPD OpenData. This was an observational study looking at all the crimes that occurred from 2020-2023. This data is of interest to us because we think that analyzing crime data could help people to better understand when/where/why crimes occur and what can be predicted based on the data. As for cleaning the data, we first cut the data set in half because it was too large and making graphs, manipulating the data, etc was taking longer than we wanted. Next we used dplyr::select() to keep the columns that we thought were relevant to the graphs we were going to make and the machine learning we planned to implement. After that we used rename() to rename the columns to something more readable and intuitive and used mutate() to remove unnecessary white space from our 'location' column. Lastly, we used filter to keep the rows where the age was in the range we wanted (0 to 90), the latitude and longitude weren't equal to zero, and the rows did not contain NA or no value.
+The source for our data is kaggle.com and the data set was created on October 12, 2023. This data is not a sample as it is all the crime data from the year 2020 to the present (2023), and because of this, it does not have any sampling bias. The data from this set was collected from data.gov and was created in November 2020 and has been regularly updated since, and is maintained by LAPD OpenData. This was an observational study looking at all the crimes that occurred from 2020-2023 in Los Angeles. This data is of interest to us because we think that analyzing crime data could help people to better understand when/where/why crimes occur and what can be predicted based on the data. As for cleaning the data, we first cut the data set in half because it was too large, and making graphs, manipulating the data, etc was taking longer than we wanted. Next, we used dplyr::select() to keep the columns that we thought were relevant to the graphs we were going to make and the machine learning we planned to implement. After that, we used rename() to rename the columns to something more readable and intuitive and used mutate() to remove unnecessary white space from our 'location' column. Lastly, we used filter to keep the rows where the age was in the range we wanted (0 to 90), the latitude and longitude weren't equal to zero, and the rows did not contain NA or no value.
 
 
 ```{r cleaning}
@@ -52,7 +52,7 @@ crime_data_sample |>
     "long" = LON
   ) |>
   
-  # Removing unnecessary whitesapce from the 'location' column
+  # Removing unnecessary whitespace from the 'location' column
   mutate(location = str_squish(location)) |>
   
   # Removing NA values, keeping rows within our desired age range (0-90), and removing rows where the latitude and longitude is 0
@@ -87,7 +87,7 @@ crime_data_sample |>
 
 ### About
 
-The following graph shows the number of crimes committed on people of varying ages. The ages range from 0-90 and the number of crimes committed range from 0-300,000. We created this graph to get a general understanding of who the most crimes were being committed against. We expected the bulk of the crimes to be committed against middle-aged people and we were correct in our prediction. 
+The following graph shows the number of crimes committed against people of varying ages. The ages range from 0-90 and the number of crimes committed ranges from 0-300,000. We created this graph to get a general understanding of who the most crimes were being committed against. We expected the bulk of the crimes to be committed against middle-aged people and we were correct in our prediction. 
 
 ```{r victim_sex/crime analysis}
 
@@ -142,13 +142,13 @@ ggplot(
 
 ### Interpretation
 
-It can be seen that the age range with the highest number of crimes committed against it is the age range of 25-43, and after 43 is steadily declines. Up until the age of adulthood (18) you are also less likely to have a crime committed against you which makes sense, since most crimes do not happen to children. The graph also resembles a Chi^2 distribution curve, Which suggests that the data isn't uniform and follows a specific pattern. This makes sense because 18-30 year olds are more likely to participate in criminal activity.
+It can be seen that the age range with the highest number of crimes committed against it is the age range of 25-43, and after 43 is steadily declines. Up until the age of adulthood (18), you are also less likely to have a crime committed against you which makes sense, since most crimes do not happen to children. The graph also resembles a Chi^2 distribution curve, Which suggests that the data isn't uniform and follows a specific pattern. This makes sense because 18-30-year-olds are more likely to participate in criminal activity.
 
 
 
 ### About
 
-This graph shows the number of crimes committed during each hour of the day. The number of crimes range from 0-7000. Like the previous graph, our initial predictions were correct. We thought that there would be a spike in crimes as the it got closer to midnight and the evening hours. We made this graph to see if there were any trends or patterns in the times that crimes occured.
+This graph shows the number of crimes committed during each hour of the day. The number of crimes ranges from 0-7000. Like the previous graph, our initial predictions were correct. We thought that there would be a spike in crimes as it got closer to midnight and the evening hours. We made this graph to see if there were any trends or patterns in the times that crimes occurred.
 
 ```{r time of day for crime}
 
@@ -236,12 +236,12 @@ ggplot(data = crime_times,
 ```
 
 ### Interpretation
-As seen in the graph there is a spike in crime rates after 5pm, this makes sense because as it gets darker out it is harder for the criminal to be seen committing the crime so they are more likely to try to commit it when its dark. There are some times in the graph that show little to no crime but I don't think that means that no crimes are committed. I would assume that the crimes committed during those times aren't well documented and during our data cleaning, they were removed because of that. This could be due to less police on duty during that time and more criminals getting away with their crimes. It seems like the safest times are from the hours of 2am to 8am, with a spike of crime from 9am to 3pm, and then it is at its highest from 7pm to 12am. 
+As seen in the graph there is a spike in crime rates after 5pm, this makes sense because as it gets darker out it is harder for the criminal to be seen committing the crime so they are more likely to try to commit it when its dark. There are some times in the graph that show little to no crime but I don't think that means that no crimes are committed. I would assume that the crimes committed during those times aren't well documented and during our data cleaning, they were removed because of that. This could be due to fewer police on duty during that time and more criminals getting away with their crimes. It seems like the safest times are from the hours of 2am to 8am, with a spike of crime from 9am to 3pm, and then it is at its highest from 7pm to 12am. 
 
 
 ### About
 
-
+The graph below shows the crime counts for victims of each descent in the dataset. The y-axis is the victim's descent, while the x-axis is the crime count. We made this graph because we wanted to see the distribution of crimes across victims of all backgrounds.
 
 ```{r descent bar plot}
 
@@ -347,15 +347,17 @@ ggplot(
     breaks = c(0,25000,50000,75000,100000,125000,150000)
   )
 
-#Vict Descent - Descent Code: A - Other Asian B - Black C - Chinese D - Cambodian F - Filipino G - Guamanian H - #Hispanic/Latin/Mexican I - American Indian/Alaskan Native J - Japanese K - Korean L - Laotian O - Other P - Pacific #Islander S - Samoan U - Hawaiian V - Vietnamese W - White X - Unknown Z - Asian Indian
+#Found descent codes online: Vict Descent - Descent Code: A - Other Asian B - Black C - Chinese D - Cambodian F - Filipino G - Guamanian H - #Hispanic/Latin/Mexican I - American Indian/Alaskan Native J - Japanese K - Korean L - Laotian O - Other P - Pacific #Islander S - Samoan U - Hawaiian V - Vietnamese W - White X - Unknown Z - Asian Indian
 ```
 
 ### Interpretation
-In this graph, we observe the number of crimes committed against people of each of the descents listed. People of Hispanic descent have a significantly higher chance of having a crime committed against them, having 50000 more crimes than people of White descent which is in second place. It is also worth noting that Hispanic people make up around 40-50% of Los Angeles' population. It is still surprising however due to the fact that people of White descent still have a significantly lower chance of having a crime committed against them. After the "Other" category, we observe a huge drop off, most likely due to there not being a large population of people of those descents residing in Los Angeles county. 
+In this graph, we observe the number of crimes committed against people of each of the descents listed. People of Hispanic descent have a significantly higher chance of having a crime committed against them, having 50000 more crimes than people of White descent which is in second place. It is also worth noting that Hispanic people make up around 40-50% of Los Angeles' population. It is still surprising however due to the fact that people of White descent still have a significantly lower chance of having a crime committed against them. After the "Other" category, we observe a huge drop-off, most likely due to there not being a large population of people of those descents residing in Los Angeles County. 
 
 
 
 ### About
+
+The graph below will show the crime counts for victims of each sex. We decided to not use "X" as the number of crimes committed against people of an unknown sex because the number was too small and could not be seen on the graph. The y-axis will be the crime count and the x-axis will be the number of months since 2020/the beginning of the dataset broken up by 6-month increments to see how the crime counts change as the years go on. We made this graph to see if there was a large gap between males and females in crime counts. If there is, further research could be done to determine the cause.
 
 ``` {r Crime by Sex}
 
@@ -415,15 +417,17 @@ ggplot(
     axis.line.y = element_line(color = "gray"),
     axis.title.x = element_text(color = "gray"),
     axis.title.y = element_text(color = "gray"),
-    legend.background = element_rect(fill = "gray17"),
+    legend.background = element_rect(fill = "gray17", color = "gray"),
     legend.title = element_text(color = "gray"),
-    legend.text = element_text(color = "gray")
+    legend.text = element_text(color = "gray"),
+    panel.grid.major.x = element_line(color = "gray30"),
+    panel.grid.major.y = element_line(color = "gray30")
   ) +
   
   # Setting the ticks for the x-axis
   scale_x_continuous(
     expand = c(0,0,0,0),
-    breaks = c(seq(0,50,5))
+    breaks = c(seq(0,50,6)) # to make years more easily recognizable
   ) +
   
   # Setting the ticks for the y-axis
@@ -441,13 +445,16 @@ ggplot(
 
 ### Interpretation
 
-In this graph, we observe the number of crimes committed on male and female persons since 2020. The part that strikes me about this graph is during the time of the pandemic both male and female crimes drop significantly. We can also observe that around a year and a half later (15 months on this graph) the crimes start to pick up again which is when mandates started to become more lenient and people were leaving there houses more and more. 
+In this graph, we observe the number of crimes committed on male and female persons since 2020. The part that strikes me about this graph is during the time of the pandemic both male and female crimes drop significantly. We can also observe that around a year and a half later (15 months on this graph) the crimes started to pick up again which is when mandates started to become more lenient and people were leaving their houses more and more. 
 
-Although it makes sense in this graph that males are on the receiving end of most crimes, it strikes me that females around 2 years after 2020 start to experience more crimes than the males, even spiking at around 34 months. I don't think there is any particular causation of this, but it is interesting nonetheless. Finally, there is a significant drop off at 45 months, but that is most likely because crimes were not reported as much because of the new year. 
+Although it makes sense in this graph that males are on the receiving end of most crimes, it strikes me that females around 2 years after 2020 start to experience more crimes than males, even spiking at around 34 months. I don't think there is any particular causation of this, but it is interesting nonetheless. Finally, there is a significant drop off at 45 months, but that is most likely because crimes were not reported as much because of the new year. 
 
 
 
 ### About
+
+The below graph will be a dumbbell plot for the average age and type of crime for each sex of the victims. The y axis will be the type of crime, which needed cleaning of the dataset to group types of crimes into a more general and well known term. This was because there was over 100 unique crimes in the dataset and some of them were as small as "Unauthorized Computer Access". The x axis will be the average age of the victim. The points will represent the average age and the sex of the victim's of the corresponding crime. The segment will represent the difference of the sex's.
+
 
 ``` {r dumbbell plot age, gender, and crime}
 
@@ -456,6 +463,7 @@ crime_data |>
   
   group_by(victim_sex) |> 
   
+  # search for keywords in each entry to group into a more broad term
   mutate(
     condensed_crime = case_when(
       grepl("battery&sexual|sex|lewd|indecent|peeping|oral", tolower(crime_description)) ~ "Sexual Assault",
@@ -467,7 +475,8 @@ crime_data |>
       grepl("arson", tolower(crime_description)) ~ "Arson",
       grepl("neglect|abuse", tolower(crime_description)) ~ "Abuse/Neglect",
       grepl("weapon|firearm|bomb", tolower(crime_description)) ~ "Weapons Related",
-      grepl("kidnap|child steal", tolower(crime_description)) ~ "Kidnapping"
+      grepl("kidnap|child steal", tolower(crime_description)) ~ "Kidnapping",
+      grepl("trafficking", tolower(crime_description)) ~ "Human Trafficking"
     )
   ) |>
   
@@ -491,7 +500,7 @@ crime_data |>
 ggplot(
   data = crime_data_crimes_clean,
   mapping = aes(
-    y = fct_reorder(condensed_crime, avg_age_male, .fun = min)
+    y = fct_reorder(condensed_crime, avg_age_female, .fun = min)
   )
 ) +
   
@@ -546,15 +555,13 @@ ggplot(
 
 ### Interpretation
 
-The graph above is a dumbbell plot comparing the average age for both sexes of victims for each type of crime. The line represents the difference between the two. Most of the average ages seem to be very similar for male and female, with sexual assault and assault crimes having the biggest difference between the two. It is not surprising to see a lower age for females in those two categories. Rather it is surprising to see such a high average age for males in sexual assault. The reason for this is unknown, and requires further research to determine the cause. It is also surprising to see such a high average age in kidnapping. Typically one would assume most victims who get kidnapped are on the younger side.
+The graph above is a dumbbell plot comparing the average age for both sexes of victims for each type of crime. The line represents the difference between the two. Most of the average ages seem to be very similar for males and females, with sexual assault and assault crimes having the biggest difference between the two. It is not surprising to see a lower age for females in those two categories. Rather it is surprising to see such a high average age for males in sexual assault. The reason for this is unknown and requires further research to determine the cause. It is also surprising to see such a high average age in kidnapping. Typically one would assume most victims who get kidnapped are on the younger side.
 
-The other crimes make a lot more sense. Abuse and neglect are mostly crimes against children, so victims of both sexes are extremely likely to be a lot younger. Other crimes like trespassing, arson, vandalism, and robbery most likely occur to people who own businesses and have a lot of personal belongings. Those people are typically on the older side. In conclusion, this graph shows the relationship between the average ages for both sexes quite well. It reinforces things we predicted and some parts surprised us. 
-
-
+The other crimes make a lot more sense. Abuse and neglect are mostly crimes against children, so victims of both sexes are extremely likely to be a lot younger. Other crimes like trespassing, arson, vandalism, and robbery most likely occur to people who own businesses and have a lot of personal belongings. Those people are typically on the older side. In conclusion, this graph shows the relationship between the average ages of both sexes quite well. It reinforces things we predicted and some parts surprised us. 
 
 # Machine Learning
 
-```{r Normalizing/Standardizng and finding which is better}
+```{r Normalizing/Standardizing and finding which is better}
 # Create normalization function
 normalize <- function(x){
   return((x - min(x)) / (max(x) - min(x) ))
@@ -766,7 +773,7 @@ rpart.plot(
 
 ## Regression
 
-# Predictions
+# About
 
 We believe that the linear model below will show some type of relationship between the victim's age and the other categorical factors. We chose to predict the victim's age as we found some interesting details in the above dumbbell plot. We will use 4 different models, one with just the type of crime, another with the type of crime and sex of the victim, one with both of the previous plus the time the crime occurred, and finally one with all three plus the descent of the victim.
 
@@ -889,14 +896,14 @@ ggplot(
 
 # Interpretation
 
-The graph above clearly indicates there is not a direct relationship between the victims age and type of crime, their sex, and the time the crime occurred. We don't think using knn regression would improve our accuracy as there is no clear relationship between the data points.
+The graph above clearly indicates there is not a direct relationship between the victim's age and type of crime, their sex, and the time the crime occurred. Using knn regression would not improve our accuracy as there is no clear relationship between the data points.
 
 
 ## Conclusion
 
-During our analysis, we found that middle aged citizens are most likelqy to have a crime committed against them, the ages with the highest amount of crimes committed against them were ages 25-43. We also found that the most dangerous times of the day in terms of crime are from the hours of 7pm to midnight with the highest number of crimes being committed during these hours, the safest times are 2am to 8am. According to the data, Hispanic people are most likely to have a crime committed against them, Being follow by White and Black people respectively. During Covid the crime rates overall dropped significantly. They went back up over the years and eventually the crime rates against females rose above those of males.
+During our analysis, we found that middle-aged citizens are most likely to have a crime committed against them, the ages with the highest amount of crimes committed against them were ages 25-43. We also found that the most dangerous times of the day in terms of crime are from the hours of 7pm to midnight with the highest number of crimes being committed during these hours, the safest times are 2am to 8am. According to the data, Hispanic people are most likely to have a crime committed against them, Being follow by White and Black people respectively. During Covid the crime rates overall dropped significantly. They went back up over the years and eventually the crime rates against females rose above those of males.
 
 
-## Limitations and Reccomendation
+## Limitations and Recommendation
 
-The first limitation that we found was that not all of the crimes we well documented, with many missing key information about the committed crime. The crimes with little documentation were removed from our data set during cleaning. We also found that at certain times crimes seemed to not be documented well either, as seen in the crimes by time graph. Future researches could include crimes from areas that are not only in Los Angeles. Researches could also look deeper at each of the graphs that we made and find the underlying 'why' to the trends that are seen in them.
+The first limitation we found was that not all of the crimes well documented, with many missing key information about the committed crime. The crimes with little documentation were removed from our data set during cleaning. We also found that at certain times crimes seemed to not be documented well either, as seen in the crimes by time graph. Future researches could include crimes from areas that are not only in Los Angeles. Researches could also look deeper at each of the graphs that we made and find the underlying 'why' to the trends that are seen in them.
